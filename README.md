@@ -2,6 +2,12 @@
 
 Clojure wrapper for Apache Commons Pool.
 
+##Install
+
+```
+[pool "0.1.0"]
+```
+
 ## Usage
 
 ```clojure
