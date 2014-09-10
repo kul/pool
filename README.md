@@ -5,7 +5,7 @@ Clojure wrapper for Apache Commons Pool.
 ##Install
 
 ```
-[pool "0.1.0"]
+[![Clojars Project](http://clojars.org/pool/latest-version.svg)](http://clojars.org/pool)
 ```
 
 ## Usage
