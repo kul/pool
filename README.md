@@ -37,6 +37,24 @@ Next, `borrow` and `return` from pool.
 `get-pool` and `get-keypool` takes optional kwargs for `destory`, `validate`,
 `activate` and `passivate` for finer control of object creation and deletion.
 
+## Caching
+Caching although a different concept is provided in the library for caching
+objects which are threadsafe in themselves and thus can be shared instead of
+pooled, but are very costly to create.
+
+`get-cache` and `get` are the only available methods to work with.  `get-cache`
+take a single arity function on key for object creation.
+
+```clojure
+(require '[pool.cache :as c])
+(def cache (c/get-cache (fn [k] (print "once!") (Thread/sleep 1000) k)))
+(c/get cache 1) ;=> once! 1
+
+; Safeguards against multiple threads.
+(defn double-write [x] (future (c/get cache x)) (future (c/get cache x)))
+(double-write 5) ;=> once! ...
+```
+
 ## License
 
 Copyright © 2014 kul
