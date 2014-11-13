@@ -14,7 +14,7 @@
   Other optional kwarg are
   :destroy double arity function which take key and object."
   [make-fn & {:keys [destroy] :or {destroy ignore}}]
-  (let [cache {:cache (atom {}) :make make-fn}]
+  (let [cache {:cache (atom {}) :make make-fn :destroy destroy}]
     (shutdown-hook
       (doseq [[key object] @(:cache cache)]
         (destroy key object)))
@@ -32,3 +32,16 @@
         (if-let [object (@cache* key)]
           object
           ((swap! cache* assoc key (make-fn key)) key))))))
+
+(defn purge
+  [cache key]
+  (let [cache* (:cache cache)
+        destory-fn (:destroy cache)]
+    ; lock?
+    (when-let [object (@cache* key)]
+      (destory-fn key object)
+      (swap! cache* dissoc key))))
+
+(defn exists?
+  [cache key]
+  ((-> cache :cache deref) key))

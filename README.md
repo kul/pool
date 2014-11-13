@@ -1,6 +1,6 @@
 # pool
 
-Clojure wrapper for Apache Commons Pool.
+For pooling and caching objects which are costly to create.
 
 ##Install
 
