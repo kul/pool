@@ -3,6 +3,19 @@
 
 (defn- ignore [o & more])
 
+(declare purge)
+
+(defn- is-snoring?
+  ; Checks if the element has reached the idle-timeout
+  [celem idle-timeout]
+  (if (empty? celem) false
+    (and (> idle-timeout -1) (>= (- (System/currentTimeMillis) (:ts celem)) idle-timeout))))
+
+(defn- touch-elem
+  ; Updates timestamp for element
+  [cache elem key]
+  ((swap! cache assoc key (assoc elem :ts (System/currentTimeMillis))) key))
+
 (defmacro shutdown-hook
   [& body]
   `(.addShutdownHook (Runtime/getRuntime) (Thread. (fn [] ~@body))))
@@ -12,9 +25,10 @@
   Safeguards against multiple threads trying to create object for same key.
   Take a single arity function @make-fn takes key for object creation which.
   Other optional kwarg are
-  :destroy double arity function which take key and object."
-  [make-fn & {:keys [destroy] :or {destroy ignore}}]
-  (let [cache {:cache (atom {}) :make make-fn :destroy destroy}]
+  :destroy double arity function which take key and object.
+  :idle-timeout time in millis to refresh idle objects. -1 to ignore"
+  [make-fn & {:keys [destroy idle-timeout] :or {destroy ignore idle-timeout -1}}]
+  (let [cache {:cache (atom {}) :make make-fn :destroy destroy :idle-timeout idle-timeout}]
     (shutdown-hook
       (doseq [[key object] @(:cache cache)]
         (destroy key object)))
@@ -24,14 +38,18 @@
   "Get object associated with @key from @cache."
   [cache key]
   (let [cache* (:cache cache)
-        make-fn (:make cache)]
+        make-fn (:make cache)
+        idle-timeout (:idle-timeout cache)
+        celem (@cache* key)]
     ; Double-Checked-Locking works as atom works like a volatile here.
-    (if-let [object (@cache* key)]
-      object
+    (if (and celem (not (is-snoring? celem idle-timeout)))
+      (:elem (touch-elem cache* celem key))
       (locking cache
-        (if-let [object (@cache* key)]
-          object
-          ((swap! cache* assoc key (make-fn key)) key))))))
+        (let [celem (@cache* key)]
+          (if (and celem (not (is-snoring? celem idle-timeout)))
+            (:elem (touch-elem cache* celem key))
+            (do (when (is-snoring? celem idle-timeout) (purge cache key))
+                (:elem ((swap! cache* assoc key {:elem (make-fn key) :ts (System/currentTimeMillis)}) key)))))))))
 
 (defn purge
   [cache key]
@@ -44,4 +62,4 @@
 
 (defn exists?
   [cache key]
-  ((-> cache :cache deref) key))
+  (:elem ((-> cache :cache deref) key)))
