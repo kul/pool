@@ -25,7 +25,8 @@
                          (validateObject [^PooledObject o] (validate (.getObject o)))
                          (activateObject [^PooledObject o] (activate (.getObject o)))
                          (passivateObject [^PooledObject o] (passivate (.getObject o))))]
-    (GenericObjectPool. object-factory)))
+    (doto (GenericObjectPool. object-factory)
+          (.setTestOnBorrow true))))
 
 (defn get-keypool
   "Returns a keypool with user provided methods for handling objects.
@@ -42,7 +43,8 @@
                          (validateObject [k ^PooledObject o] (validate k (.getObject o)))
                          (activateObject [k ^PooledObject o] (activate k (.getObject o)))
                          (passivateObject [k ^PooledObject o] (passivate k (.getObject o))))]
-    (GenericKeyedObjectPool. object-factory)))
+    (doto (GenericKeyedObjectPool. object-factory)
+          (.setTestOnBorrow true))))
 
 (defn borrow
   ([^GenericObjectPool pool] (.borrowObject pool))
